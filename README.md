@@ -18,11 +18,20 @@ Ideally suited for transferring large files (videos, photos, documents) from **M
 
 ---
 
-## 🛠️ How to Use (Windows Executable)
+## � Screenshots
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/rtraees/File-Beam/main/server-web-view.png" width="45%" alt="Server View (PC)">
+  <img src="https://raw.githubusercontent.com/rtraees/File-Beam/main/client-device-view.png" width="45%" alt="Client View (Mobile)">
+</p>
+
+---
+
+## �🛠️ How to Use (Windows Executable)
 
 Use the standalone `.exe` version to run File Beam on any Windows PC without installing Python.
 
-1.  **Download** the latest `File Beam.exe` release.
+1.  **Download** the latest `File Beam.exe` from [Releases](https://github.com/rtraees/File-Beam/releases).
 2.  **Run** the application.
     - A console window will open showing the server logs.
     - Your default web browser will automatically open to the app interface.
@@ -45,7 +54,7 @@ If you want to modify or contribute to the project, follow these steps:
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/file-beam.git
+    git clone https://github.com/rtraees/file-beam.git
     cd file-beam
     ```
 2.  Install dependencies:
@@ -84,7 +93,8 @@ pyinstaller --noconfirm --onefile --windowed --name "File Beam" --add-data "temp
 Developed with ❤️ by **Raees Ul Islam**.
 
 - 📧 **Email**: [rtraees@gmail.com](mailto:rtraees@gmail.com)
-- 🌐 **GitHub**: [github.com/rtraees](https://github.com/rtraees)
+- 🌐 **GitHub**: [github.com/rtraees](https://www.github.com/rtraees)
+- 👔 **LinkedIn**: [linkedin.com/in/rtraees](https://www.linkedin.com/in/rtraees/)
 
 ---
 

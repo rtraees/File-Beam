@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>File Beam (Python)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --surface-hover: #334155;
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --text: #f1f5f9;
+        --text-muted: #94a3b8;
+        --success: #10b981;
+        --error: #ef4444;
+        --border: #334155;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Inter", sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Glassmorphism Logic */
+      .glass {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      /* Desktop View */
+      #desktop-view {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+      }
+
+      .qr-card {
+        padding: 40px;
+        border-radius: 24px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .qr-box {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+      p {
+        color: var(--text-muted);
+        margin: 0;
+      }
+
+      input.url-input {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        padding: 10px 15px;
+        border-radius: 8px;
+        width: 300px;
+        text-align: center;
+        font-family: monospace;
+        margin-top: 10px;
+      }
+
+      /* Mobile View (App) */
+      #mobile-view {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+        padding: 20px;
+        box-sizing: border-box;
+        gap: 20px;
+      }
+
+      .app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .app-brand {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .app-brand i {
+        color: var(--primary);
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .btn {
+        background: var(--surface);
+        border: none;
+        color: white;
+        padding: 16px;
+        border-radius: 16px;
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: white;
+      }
+      .btn-primary:hover {
+        background: var(--primary-hover);
+      }
+      .btn-secondary {
+        background: var(--surface);
+        border: 1px solid var(--border);
+      }
+
+      /* Hidden Inputs */
+      input[type="file"] {
+        display: none;
+      }
+
+      /* Progress Section */
+      .progress-card {
+        border-radius: 20px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .progress-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+      }
+      .progress-bar-bg {
+        height: 8px;
+        background: var(--bg);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        background: var(--success);
+        width: 0%;
+        transition: width 0.3s ease;
+      }
+
+      /* File List */
+      .file-list {
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding-bottom: 80px;
+      }
+
+      .file-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 12px;
+        background: rgba(30, 41, 59, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+      }
+
+      .file-icon {
+        width: 40px;
+        height: 40px;
+        background: var(--bg);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: var(--text-muted);
+      }
+      .file-details {
+        flex: 1;
+        overflow: hidden;
+      }
+      .file-name {
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .file-meta {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .status-icon {
+        font-size: 1.25rem;
+      }
+      .status-pending {
+        color: var(--text-muted);
+      }
+      .status-uploading {
+        color: var(--primary);
+        animation: spin 1s linear infinite;
+      }
+      .status-done {
+        color: var(--success);
+      }
+      .status-error {
+        color: var(--error);
+      }
+      .status-skipped {
+        color: #f59e0b;
+      }
+
+      .item-progress {
+        height: 3px;
+        background: var(--bg);
+        margin-top: 6px;
+        border-radius: 2px;
+        width: 100%;
+        overflow: hidden;
+      }
+      .item-progress-fill {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.2s;
+      }
+
+      @keyframes spin {
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* History Sheet */
+      .history-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(30, 41, 59, 0.98);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        z-index: 1000;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateY(calc(100% - 60px));
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+        max-width: 100%;
+        display: none; /* Hidden by default until loaded */
+      }
+
+      .history-sheet.expanded {
+        transform: translateY(0);
+      }
+
+      .history-header {
+        height: 60px;
+        padding: 0 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        flex-shrink: 0;
+      }
+
+      .history-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        padding-top: 0;
+        max-height: 70vh;
+      }
+
+      /* Media Queries */
+      @media (max-width: 768px) {
+        #desktop-view {
+          display: none;
+        }
+        #mobile-view {
+          display: flex;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Desktop View -->
+    <div id="desktop-view">
+      <div class="qr-card glass">
+        <h1>Scan to Upload</h1>
+        <p>Open this page on your mobile device</p>
+        <div class="qr-box">
+          <div id="qrcode"></div>
+        </div>
+        <div>
+          <input type="text" id="urlInput" class="url-input" value="" />
+          <p style="font-size: 0.8rem; margin-top: 8px">
+            Ensure your mobile is on the same network
+          </p>
+        </div>
+        <div style="margin-top: 20px">
+          <button
+            onclick="
+              document.getElementById('desktop-view').style.display = 'none';
+              document.getElementById('mobile-view').style.display = 'flex';
+            "
+            class="btn btn-secondary"
+          >
+            <i class="ph ph-desktop"></i> Switch to App View (Debug)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile View -->
+    <div id="mobile-view">
+      <div class="app-header">
+        <div class="app-brand"><i class="ph ph-files"></i> File Beam</div>
+        <div
+          style="font-size: 0.8rem; color: var(--text-muted)"
+          id="queue-count"
+        >
+          0 items
+        </div>
+      </div>
+
+      <div class="actions">
+        <button
+          class="btn btn-primary"
+          onclick="document.getElementById('fileInput').click()"
+        >
+          <i class="ph ph-file-plus"></i> Files
+        </button>
+        <button
+          class="btn btn-secondary"
+          onclick="document.getElementById('folderInput').click()"
+        >
+          <i class="ph ph-folder-plus"></i> Folder
+        </button>
+      </div>
+
+      <input
+        type="file"
+        id="fileInput"
+        multiple
+        onchange="handleFiles(this.files)"
+      />
+      <input
+        type="file"
+        id="folderInput"
+        webkitdirectory
+        directory
+        onchange="handleFiles(this.files)"
+      />
+
+      <div
+        class="progress-card glass"
+        id="overall-progress-card"
+        style="display: none"
+      >
+        <div class="progress-info">
+          <span id="progress-text">Uploading...</span>
+          <div style="display: flex; gap: 10px; align-items: center">
+            <span
+              id="upload-speed"
+              style="font-size: 0.8rem; color: var(--text-muted)"
+              >0 KB/s</span
+            >
+            <span
+              id="progress-percent"
+              style="color: var(--success); font-weight: 600"
+              >0%</span
+            >
+          </div>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="overall-bar"></div>
+        </div>
+      </div>
+
+      <div class="file-list" id="fileList">
+        <!-- Items injected here -->
+        <div
+          style="
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 50px;
+            opacity: 0.5;
+          "
+          id="empty-state"
+        >
+          <i
+            class="ph ph-upload-simple"
+            style="font-size: 48px; margin-bottom: 10px"
+          ></i>
+          <p>Select files or folders to start</p>
+        </div>
+      </div>
+
+      <!-- History Sheet -->
+      <div class="history-sheet" id="history-sheet">
+        <div class="history-header" onclick="toggleHistory()">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <div
+              style="
+                background: rgba(255, 255, 255, 0.1);
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              "
+            >
+              <i
+                class="ph ph-clock-counter-clockwise"
+                style="color: var(--primary)"
+              ></i>
+            </div>
+            <span style="font-weight: 600; font-size: 0.95rem"
+              >Upload History</span
+            >
+            <span
+              id="history-badge"
+              style="
+                background: var(--surface-hover);
+                font-size: 0.75rem;
+                padding: 2px 8px;
+                border-radius: 10px;
+                color: var(--text-muted);
+              "
+              >0</span
+            >
+          </div>
+          <i
+            class="ph ph-caret-up"
+            id="history-toggle-icon"
+            style="transition: transform 0.3s"
+          ></i>
+        </div>
+        <div class="history-content">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin: 15px 0 10px 0;
+            "
+          >
+            <span
+              id="history-stats-full"
+              style="font-size: 0.8rem; color: var(--text-muted)"
+              >Total: 0 B</span
+            >
+            <button
+              onclick="
+                clearHistory();
+                event.stopPropagation();
+              "
+              style="
+                background: none;
+                border: none;
+                color: var(--error);
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                cursor: pointer;
+                font-size: 0.9rem;
+              "
+            >
+              <i class="ph ph-trash"></i> Clear All
+            </button>
+          </div>
+          <div class="file-list" id="historyList" style="padding-bottom: 20px">
+            <!-- History Items -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // --- QR Code & Desktop Logic ---
+      const urlInput = document.getElementById("urlInput");
+      const qrDiv = document.getElementById("qrcode");
+      let qrCodeObj = null;
+
+      function updateQR() {
+        const url = urlInput.value;
+        if (qrDiv && url) {
+          qrDiv.innerHTML = "";
+          new QRCode(qrDiv, {
+            text: url,
+            width: 200,
+            height: 200,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H,
+          });
+        }
+      }
+
+      // Initialize URLs
+      // Use Flask injected IP
+      const serverIp = "{{ ip }}";
+      const serverPort = "5000";
+      urlInput.value = `http://${serverIp}:${serverPort}/`;
+
+      updateQR();
+
+      urlInput.addEventListener("input", updateQR);
+
+      // --- Upload Logic ---
+      const CHUNK_SIZE = 1 * 1024 * 1024; // 1MB
+      let uploadQueue = [];
+      let isUploading = false;
+      let totalBytes = 0;
+      let loadedBytesGlobal = 0;
+
+      // Speed Calculation
+      let lastLoadedBytes = 0;
+      let lastSpeedTime = Date.now();
+      let speedInterval = null;
+
+      function formatSize(bytes) {
+        if (bytes === 0) return "0 B";
+        const k = 1024;
+        const sizes = ["B", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+      }
+
+      // Optimized for extensive file lists (prevents UI freeze on iPhone)
+      function handleFiles(files) {
+        if (!files.length) return;
+
+        const list = document.getElementById("fileList");
+        const emptyState = document.getElementById("empty-state");
+        if (emptyState) emptyState.style.display = "none";
+
+        const fileArray = Array.from(files);
+        const totalFiles = fileArray.length;
+        let processedCount = 0;
+
+        // Show creating state
+        document.getElementById("queue-count").innerText =
+          `Processing ${fileArray.length} items...`;
+
+        // Process in chunks of 5 using requestAnimationFrame
+        let chunkIndex = 0;
+        const CHUNK_PROCESS_SIZE = 5;
+
+        function processChunk() {
+          const chunk = fileArray.slice(
+            chunkIndex,
+            chunkIndex + CHUNK_PROCESS_SIZE,
+          );
+
+          if (chunk.length === 0) {
+            // Done
+            document.getElementById("queue-count").innerText =
+              uploadQueue.length + " items";
+            // Start upload if not running
+            if (!isUploading && uploadQueue.length > 0) {
+              document.getElementById("overall-progress-card").style.display =
+                "flex";
+              startSpeedTracker();
+              processQueue();
+            }
+            return;
+          }
+
+          chunk.forEach((file) => {
+            addToQueue(file);
+          });
+
+          chunkIndex += CHUNK_PROCESS_SIZE;
+          requestAnimationFrame(processChunk);
+        }
+
+        processChunk();
+
+        // Reset inputs
+        document.getElementById("fileInput").value = "";
+        document.getElementById("folderInput").value = "";
+      }
+
+      function addToQueue(file) {
+        const id = Math.random().toString(36).substr(2, 9);
+        const relPath = file.webkitRelativePath || file.name;
+
+        const item = {
+          id,
+          file,
+          path: relPath,
+          status: "pending",
+          size: file.size,
+          uploaded: 0,
+        };
+
+        uploadQueue.push(item);
+        totalBytes += file.size;
+        renderItem(item);
+      }
+
+      function renderItem(item) {
+        const list = document.getElementById("fileList");
+        const el = document.createElement("div");
+        el.className = "file-item glass";
+        el.id = "item-" + item.id;
+
+        let icon = "ph-file";
+        if (item.file.type.includes("image")) icon = "ph-image";
+        else if (item.file.type.includes("video")) icon = "ph-film-strip";
+        else if (item.file.name.endsWith(".pdf")) icon = "ph-file-pdf";
+
+        const displayPath =
+          item.path.length > 30 ? "..." + item.path.slice(-30) : item.path;
+
+        el.innerHTML = `
+                <div class="file-icon"><i class="ph ${icon}"></i></div>
+                <div class="file-details">
+                    <div class="file-name">${displayPath}</div>
+                    <div class="file-meta">
+                        <span>${formatSize(item.size)}</span>
+                        <span id="status-text-${item.id}">Pending</span>
+                    </div>
+                    <div class="item-progress"><div class="item-progress-fill" id="bar-${item.id}"></div></div>
+                </div>
+                <div class="status-icon" id="icon-${item.id}"><i class="ph ph-hourglass"></i></div>
+            `;
+        list.appendChild(el);
+      }
+
+      function updateItemStatus(item, status, iconClass) {
+        item.status = status;
+        const iconEl = document.getElementById("icon-" + item.id);
+        if (iconEl) iconEl.innerHTML = `<i class="ph ${iconClass}"></i>`;
+        const textEl = document.getElementById("status-text-" + item.id);
+        if (textEl)
+          textEl.innerText = status.charAt(0).toUpperCase() + status.slice(1);
+
+        if (status === "uploading")
+          iconEl.className = "status-icon status-uploading";
+        else if (status === "done")
+          iconEl.className = "status-icon status-done";
+        else if (status === "skipped")
+          iconEl.className = "status-icon status-skipped";
+        else if (status === "error")
+          iconEl.className = "status-icon status-error";
+        else iconEl.className = "status-icon status-pending";
+      }
+
+      async function processQueue() {
+        if (uploadQueue.length === 0) {
+          isUploading = false;
+          stopSpeedTracker();
+          return;
+        }
+
+        const item = uploadQueue.find((i) => i.status === "pending");
+        if (!item) {
+          isUploading = false;
+          stopSpeedTracker();
+          document.getElementById("progress-text").innerText = "All Done";
+          document.getElementById("upload-speed").innerText = "";
+          return;
+        }
+
+        isUploading = true;
+        updateItemStatus(item, "checking", "ph-spinner");
+
+        try {
+          const formData = new FormData();
+          formData.append("action", "check_exists");
+          formData.append("relativePath", item.path);
+          formData.append("name", item.file.name);
+
+          const res = await fetch("/", { method: "POST", body: formData });
+          const json = await res.json();
+
+          if (json.status === "exists") {
+            updateItemStatus(item, "skipped", "ph-skip-forward");
+            loadedBytesGlobal += item.size;
+            updateOverallProgress();
+            saveToHistory(item, "Skipped");
+            processQueue();
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+          updateItemStatus(item, "error", "ph-warning");
+          processQueue();
+          return;
+        }
+
+        updateItemStatus(item, "uploading", "ph-circle-notch");
+        await uploadFileChunks(item);
+      }
+
+      async function uploadFileChunks(item) {
+        const totalChunks = Math.ceil(item.size / CHUNK_SIZE);
+        let chunkIndex = 0;
+        let fileUploadedBytes = 0;
+
+        if (item.size === 0) {
+          // Empty logic
+        }
+
+        for (chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+          const start = chunkIndex * CHUNK_SIZE;
+          const end = Math.min(start + CHUNK_SIZE, item.size);
+          const chunk = item.file.slice(start, end);
+
+          const formData = new FormData();
+          formData.append("action", "upload_chunk");
+          formData.append("file", chunk);
+          formData.append("chunkIndex", chunkIndex);
+          formData.append("totalChunks", totalChunks);
+          formData.append("relativePath", item.path);
+          formData.append("name", item.file.name);
+
+          try {
+            const res = await fetch("/", { method: "POST", body: formData });
+            const json = await res.json();
+
+            if (json.status !== "success") throw new Error(json.message);
+
+            fileUploadedBytes += chunk.size;
+            item.uploaded = fileUploadedBytes;
+            loadedBytesGlobal += chunk.size;
+
+            const itemPercent = (fileUploadedBytes / item.size) * 100;
+            document.getElementById("bar-" + item.id).style.width =
+              itemPercent + "%";
+
+            updateOverallProgress();
+          } catch (e) {
+            updateItemStatus(item, "error", "ph-warning");
+            processQueue();
+            return;
+          }
+        }
+
+        updateItemStatus(item, "done", "ph-check-circle");
+        saveToHistory(item, "Uploaded");
+        processQueue();
+      }
+
+      function updateOverallProgress() {
+        if (totalBytes === 0) return;
+        const percent = Math.min(
+          100,
+          (loadedBytesGlobal / totalBytes) * 100,
+        ).toFixed(1);
+        document.getElementById("overall-bar").style.width = percent + "%";
+        document.getElementById("progress-percent").innerText = percent + "%";
+      }
+
+      // --- Speed Logic ---
+      function startSpeedTracker() {
+        if (speedInterval) clearInterval(speedInterval);
+        lastLoadedBytes = loadedBytesGlobal;
+        lastSpeedTime = Date.now();
+        speedInterval = setInterval(updateSpeed, 1000);
+      }
+
+      function stopSpeedTracker() {
+        if (speedInterval) clearInterval(speedInterval);
+        document.getElementById("upload-speed").innerText = "";
+      }
+
+      function updateSpeed() {
+        const now = Date.now();
+        const timeDiff = (now - lastSpeedTime) / 1000;
+        if (timeDiff <= 0) return;
+
+        const bytesDiff = loadedBytesGlobal - lastLoadedBytes;
+        const speed = bytesDiff / timeDiff;
+
+        document.getElementById("upload-speed").innerText =
+          formatSize(speed) + "/s";
+
+        lastLoadedBytes = loadedBytesGlobal;
+        lastSpeedTime = now;
+      }
+
+      // --- History Logic ---
+      const HISTORY_KEY = "filebeam_history";
+
+      function toggleHistory() {
+        const sheet = document.getElementById("history-sheet");
+        const icon = document.getElementById("history-toggle-icon");
+
+        if (sheet.classList.contains("expanded")) {
+          sheet.classList.remove("expanded");
+          icon.style.transform = "rotate(0deg)";
+        } else {
+          sheet.classList.add("expanded");
+          icon.style.transform = "rotate(180deg)";
+        }
+      }
+
+      function loadHistory() {
+        const stored = localStorage.getItem(HISTORY_KEY);
+        const sheet = document.getElementById("history-sheet");
+
+        if (!stored) {
+          sheet.style.display = "none";
+          return;
+        }
+
+        const history = JSON.parse(stored);
+        if (!history || !history.length) {
+          sheet.style.display = "none";
+          return;
+        }
+
+        sheet.style.display = "flex"; // Show sheet
+        const list = document.getElementById("historyList");
+        list.innerHTML = "";
+
+        let totalHistorySize = 0;
+
+        history.reverse().forEach((h) => {
+          totalHistorySize += h.size;
+          const el = document.createElement("div");
+          el.className = "file-item glass";
+          el.style.marginBottom = "8px"; // explicit spacing
+
+          let icon = "ph-file";
+          if (h.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) icon = "ph-image";
+          else if (h.name.match(/\.(mp4|mov|avi)$/i)) icon = "ph-film-strip";
+
+          const dateStr = new Date(h.date).toLocaleString([], {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          el.innerHTML = `
+                    <div class="file-icon"><i class="ph ${icon}"></i></div>
+                    <div class="file-details">
+                        <div class="file-name">${h.path || h.name}</div>
+                        <div class="file-meta">
+                            <span>${formatSize(h.size)}</span>
+                            <span>${dateStr}</span>
+                        </div>
+                    </div>
+                    <div class="status-icon status-done" style="font-size:1rem;">
+                        ${h.status === "Skipped" ? '<i class="ph ph-skip-forward" style="color:#f59e0b"></i>' : '<i class="ph ph-check"></i>'}
+                    </div>
+                `;
+          list.appendChild(el);
+        });
+
+        document.getElementById("history-badge").innerText = history.length;
+        document.getElementById("history-stats-full").innerText =
+          `Total: ${formatSize(totalHistorySize)}`;
+      }
+
+      function saveToHistory(item, status) {
+        const entry = {
+          name: item.file.name,
+          path: item.path,
+          size: item.size,
+          date: Date.now(),
+          status: status,
+        };
+
+        const stored = localStorage.getItem(HISTORY_KEY);
+        const history = stored ? JSON.parse(stored) : [];
+        history.push(entry);
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+
+        loadHistory();
+      }
+
+      function clearHistory() {
+        Swal.fire({
+          title: "Clear History?",
+          text: "This will remove the local list of uploaded files.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#ef4444",
+          cancelButtonColor: "#334155",
+          confirmButtonText: "Yes, clear it!",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            localStorage.removeItem(HISTORY_KEY);
+            document.getElementById("history-sheet").style.display = "none";
+            document.getElementById("historyList").innerHTML = "";
+
+            // Reset toggle if open
+            const sheet = document.getElementById("history-sheet");
+            if (sheet.classList.contains("expanded")) toggleHistory();
+
+            Swal.fire({
+              title: "Cleared!",
+              icon: "success",
+              timer: 1500,
+              showConfirmButton: false,
+              background: "#1e293b",
+              color: "#fff",
+            });
+          }
+        });
+      }
+
+      // Init History
+      loadHistory();
+    </script>
+  </body>
+</html>
